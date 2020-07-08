@@ -2,3 +2,4 @@
 .idea
 build\classes\*
 build/kotlin
+.idea/workspace.xml
