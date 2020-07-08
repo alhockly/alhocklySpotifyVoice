@@ -23,41 +23,66 @@ class SpeechRec {
     private val mic = Microphone(FLACFileWriter.FLAC)
     private val duplex = GSpeechDuplex("AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw")
 
-    lateinit var spotify : Spotify
+    var spotify = Spotify()
+    var speechHandled = false
+    var speechRecThread : Thread? = null
 
+    var speechResponseListener = SpeechResponseListener(this)
 
-    fun start(){
-        spotify = Spotify()
+    init{
         //Duplex Configuration
         duplex.language = "en"
-        duplex.addResponseListener(SpeechResponseListener(this))
-        startSpeechRecognition()
+        duplex.addResponseListener(speechResponseListener)
     }
 
 
-    fun handleSpeech(gr : GoogleResponse){
-        val text = gr.response
+
+    fun handleSpeech(text : String){
+        speechResponseListener.ignore = true
+        //search for a track
         if (text.contains("play") && text.contains("by")){
-            var inputsong = text.substring(text.indexOf("play") + 4, text.indexOf("by"))
-            var inputartist = text.substring(text.indexOf("by") + 2)
-            //Online().OpenYoutube(inputsong, inputartist)
-
-
-            var topResult = spotify.searchTrack(inputsong, inputartist)
-            if(topResult!= null) {
-                spotify.playTrack(topResult)
-            }else{
-                print("no matching track found")
-                spotify.roughGoogle("$inputsong by$inputartist spotify")
-            }
-
+           spotifyPlayTrack(text)
         }
-        exit(0)
+
+        //search artists could also be used for albums and playlists
+        if(text.contains("play") && text.contains("on spotify")){
+            var term = text.substring(text.indexOf("play")+5, text.indexOf("on spotify"))
+            var search = spotify.requestGenericSearch("artist",term)
+            if(search != null){
+                spotify.requestPlayTrack(search)
+            }
+        }
+
+        if(text.contains("play spotify") || text.contains("pause spotify")){
+            spotify.requestPausePlayback(text.contains("play"))
+        }
+
+
+
+        speechHandled = true
     }
+
+
+
+    fun spotifyPlayTrack(text : String){
+        var inputsong = text.substring(text.indexOf("play ") + 5, text.indexOf(" by "))
+        var inputartist = text.substring(text.indexOf( " by ") + 3)
+
+        var topResult = spotify.requestSearchTrack("$inputsong $inputartist")
+        if(topResult!= null) {
+            spotify.requestPlayTrack(topResult)
+        }else{
+            println("\nno matching track found in spotify search")
+            spotify.roughGoogle("$inputsong $inputartist")
+        }
+    }
+
 
     fun startSpeechRecognition() {
         //Start a new Thread so our application don't lags
-        Thread {
+
+        speechRecThread = Thread {
+            //println("\nspeech rec thread open\n")
             try {
                 duplex.recognize(mic.targetDataLine, mic.audioFormat)
             } catch (e: LineUnavailableException) {
@@ -65,15 +90,24 @@ class SpeechRec {
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             }
-        }.start()
+        }
+
+        speechRecThread!!.start()
     }
 
     /**
      * Stops the Speech Recognition
      */
     fun stopSpeechRecognition() {
+        duplex.stopSpeechRecognition()
+     //   duplex.removeResponseListener(speechResponseListener)
         mic.close()
+        speechRecThread!!.stop()
+
+       // println("mic closed, long speech rec thread closed")
+       // println("speechRecThread already alive? ${speechRecThread!!.isAlive}")
         //println("\nStopping Speech Recognition...." + " , Microphone State is:" + mic.state)
 
     }
 }
+

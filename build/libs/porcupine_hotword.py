@@ -133,8 +133,8 @@ class PorcupineDemo(Thread):
 
                     playbeep()
 
-
-                    os.system("java -jar alhocklySpotifyVoice-1.0-SNAPSHOT.jar")
+                    exit()
+                    #os.system("java -jar alhocklySpotifyVoice-1.0-SNAPSHOT.jar")
                     print("\nlistening for hotword")
 
 

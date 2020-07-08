@@ -5,13 +5,18 @@ import com.darkprograms.speech.recognizer.GoogleResponse
 
 class SpeechResponseListener(speechRec: SpeechRec) : GSpeechResponseListener {
     val sp = speechRec
+    var ignore = true
+
     override fun onResponse(gr: GoogleResponse?) {
-        var output = gr!!.response
-        println(output)
-        if (output != null && gr.isFinalResponse) {
-            print(output)
-            sp.stopSpeechRecognition()
-            sp.handleSpeech(gr)
+        if(!ignore) {
+            var output = gr!!.response
+            println(output)
+            if (output != null && gr.isFinalResponse) {
+                println(output)
+                sp.stopSpeechRecognition()
+                sp.handleSpeech(gr.response.toLowerCase())
+                return
+            }
         }
     }
 }

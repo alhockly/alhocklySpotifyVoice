@@ -8,18 +8,26 @@ import java.util.*
 class GoogleSearch {
    var  apiKey = "AIzaSyBnOBjQOif7CRdptFRR_m--s7ubGfB8At8"
     var searchEngineKey = "008627090675627990467:hcutbn_2ktw"
-    fun search(term :String){
+    fun search(term :String) : String{
 
         var json = Online().wget("https://www.googleapis.com/customsearch/v1?key=$apiKey&cx=$searchEngineKey&q=${URLEncoder.encode(term)}")
 
-
         val results = Gson().fromJson(json, GsonGoogleSearch::class.java)
         var levenlist = arrayListOf<Pair<Items,Int>>()
+
         for (res in results.items){
             levenlist.add(Pair(res,calculateLeven(res.title,term)))
         }
-        print(levenlist)
+        println("\n google results :::::::::::::")
+        for( item in levenlist){
+            println("${item.first.title} - L(${item.second})")
+
+        }
+        println("::::::::::::::::::::::::::::")
+        return levenlist[0].first.link
     }
+
+
 
     internal fun calculateLeven(x: String, y: String): Int {
 

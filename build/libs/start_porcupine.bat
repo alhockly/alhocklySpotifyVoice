@@ -32,5 +32,5 @@
 ::
 ::978f952a14a936cc963da21a135fa983
 @echo off
-cd G:\JAVA\ItunesVoiceControl\out\artifacts\ItunesVoiceControl_jar
+
 python porcupine_hotword.py --keyword_file_paths friday_windows.ppn

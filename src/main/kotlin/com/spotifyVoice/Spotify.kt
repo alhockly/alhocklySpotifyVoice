@@ -2,26 +2,20 @@ package com.spotifyVoice
 
 
 import authorization.authorization_code.com.spotifyVoice.GoogleSearch
-import authorization.authorization_code.com.spotifyVoice.Online
 import com.google.gson.JsonArray
 import com.wrapper.spotify.SpotifyApi
 import com.wrapper.spotify.exceptions.SpotifyWebApiException
 import com.wrapper.spotify.exceptions.detailed.UnauthorizedException
-import com.wrapper.spotify.model_objects.specification.Paging
-import com.wrapper.spotify.model_objects.specification.Track
 import org.apache.hc.core5.http.ParseException
 import java.io.*
 import java.lang.Exception
 import java.net.URI
-import java.net.URLEncoder
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletionException
 
 class Spotify {
-
     var redirectUrl = "http://localhost/"
-    var deviceId : String? = "549fec7e69c54b8e1ff5798313f3be6d10a5bd7a"
-
+    var deviceId: String? = "549fec7e69c54b8e1ff5798313f3be6d10a5bd7a"
     var spotifyApi = SpotifyApi.Builder()
         .setClientId("5df25986187c4d4fa2e00f6a1285372a")
         .setClientSecret("9d3d0d78a4b249c180185297830e5224")
@@ -30,62 +24,159 @@ class Spotify {
 
     var userprefs = readUserPrefsFromFile()
 
-    var clientCredentialsRequest = spotifyApi.clientCredentials().build()
 
     init {
-        if(userprefs==null){
-            userprefs=Userprefs(null,null,null,deviceId)
+        if (userprefs == null) {
+            userprefs = Userprefs(null, null, null, deviceId)
         } else {
             spotifyApi.accessToken = userprefs!!.accessToken
             spotifyApi.refreshToken = userprefs!!.refreshToken
         }
-        if(!isAuthorised()){
+        if (!isAuthorised()) {
             authorizationCodeUri_Sync()
         }
     }
 
-    fun searchTrack(trackName : String, artistName: String) : String? {
+    fun requestSearchTrack(searchTerm : String): String? {
         try {
-            var search = spotifyApi.searchTracks("$trackName  $artistName").build().execute()
-            if(search.items.isNotEmpty()){
-                //look through array and find most accurate match
-                for(track in search.items){
-                    println(track.name)
-                }
-                return search.items[0].uri
-            }
+            return searchTrack(searchTerm)
 
-        }catch (e : UnauthorizedException){
-            if(checkAuthStatus()){
-                var search = spotifyApi.searchTracks("$trackName  $artistName").build().execute()
-                if(search.items.isNotEmpty()){
-                    //look through array and find most accurate match
-                    for(track in search.items){
-                        println(track.name)
-                    }
-                    return search.items[0].uri
-                }
+        } catch (e: UnauthorizedException) {
+            if (checkAuthStatus()) {
+                return searchTrack(searchTerm)
             }
         }
-
 
         return null
     }
 
-    fun roughGoogle(search : String){
-        GoogleSearch().search(search.trim())
+    fun searchTrack(searchTerm : String): String? {
+
+        var search = spotifyApi.searchTracks(searchTerm).build().execute()
+        if (search.items.isNotEmpty()) {
+            //look through array and find most accurate match
+            println("\nSpotify search results:::::::::::::")
+            for (track in search.items) {
+                println("${track.artists[0].name} - ${track.name} | ${track.album.name}")
+            }
+            println(":::::::::::::::::::::::::::::::::::::")
+            return search.items[0].uri
+        }
+        return null
+
     }
 
-    fun playTrack(uri : String){
-        if(deviceId == null){
+    fun requestGenericSearch(types : String, search : String) : String?{
+        try {
+            return GenericSearch(search, types)
+
+        } catch (e: UnauthorizedException) {
+            if (checkAuthStatus()) {
+                return GenericSearch(search, types)
+            }
+        }
+        println("no found matches")
+        return null
+    }
+
+    fun GenericSearch(types: String, search: String) : String?{
+        var results = spotifyApi.searchItem(types,search).build().execute()
+        if(results != null){
+            if(results.artists.items.isNotEmpty()) {
+                return results.artists.items[0].uri
+            }
+        }
+        else{
+            println("no results for generic search")
+        }
+        return null
+    }
+
+    fun roughGoogle(search: String) {
+        var url = GoogleSearch().search(search.trim())
+        var uri = urlToUri(url)
+        requestPlayTrack(uri)
+    }
+
+    fun playUri(uri: String) {
+        if (deviceId == null) {
             var devices = spotifyApi.usersAvailableDevices.build().execute()
             deviceId = devices[1].id
         }
-        var array =  JsonArray()
-        array.add(uri)
-        spotifyApi.startResumeUsersPlayback().uris(array).device_id(deviceId).build().execute()
+        if (uri.contains("track")) {
+            var array = JsonArray()
+            array.add(uri)
+            spotifyApi.startResumeUsersPlayback().uris(array).device_id(deviceId).build().execute()
+        }
+        if (uri.contains("artist") || uri.contains("album") || uri.contains("playlist")) {
+            spotifyApi.startResumeUsersPlayback().context_uri(uri).device_id(deviceId).build().execute()
+        }
+
+        println("playing $uri")
 
     }
+
+    fun requestPlayTrack(uri: String) {
+        try {
+            playUri(uri)
+        } catch (e: UnauthorizedException) {
+            if (checkAuthStatus()) {
+                playUri(uri)
+            }
+        }
+    }
+
+    fun requestPausePlayback(pause: Boolean) {
+        try {
+            pausePlayback(pause)
+        } catch (e: UnauthorizedException) {
+            if (checkAuthStatus()) {
+                pausePlayback(pause)
+            }
+        }
+    }
+
+
+    fun pausePlayback(pause : Boolean){
+        if(!pause){
+            spotifyApi.pauseUsersPlayback().build().execute()
+        } else {
+            spotifyApi.startResumeUsersPlayback().device_id(deviceId).build().execute()
+        }
+    }
+
+
+    enum class UrlType(val value : String){
+        TRACK("/track/"),
+        ARTIST("/artist/"),
+        PLAYLIST("/playlist/"),
+        ALBUM("/album/")
+
+    }
+
+    fun urlToUri(url : String) : String{
+        var parts = url.split("/")
+        var newuri = parts[parts.size-1]
+
+        if(newuri.contains("?")){
+            newuri = newuri.substring(0,newuri.indexOf("?"))
+        }
+        if(url.contains(UrlType.TRACK.value)){
+            return "spotify:track:"+newuri
+        }
+        if(url.contains(UrlType.ARTIST.value)){
+            return "spotify:artist:"+newuri
+        }
+        if(url.contains(UrlType.PLAYLIST.value)){
+            return "spotify:playlist:"+newuri
+        }
+        if (url.contains(UrlType.ALBUM.value)){
+            return "spotify:album:"+newuri
+        }
+        return ""
+    }
+    //https://open.spotify.com/track/5hqh0JUxRShhqdaxu7wlz5?si=9Z98g3YoRK-ZeG7ujsf4kw
+    //spotify:track:5hqh0JUxRShhqdaxu7wlz5
 
     fun isAuthorised() : Boolean {
         if(userprefs!=null){
@@ -144,7 +235,7 @@ class Spotify {
     fun authorizationCodeUri_Sync() {
     val uri = spotifyApi.authorizationCodeUri()
         .scope("user-read-playback-state,user-modify-playback-state,streaming,user-top-read")
-        .show_dialog(false)
+        .show_dialog(true)
         .build().execute()
 
     println("URI: $uri")
