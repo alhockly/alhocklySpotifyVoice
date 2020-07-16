@@ -13,7 +13,7 @@ data class GsonGoogleSearch (
 
 data class Items(
     @SerializedName("kind") val kind : String,
-    @SerializedName("title") val title : String,
+    @SerializedName("title") var title : String,
     @SerializedName("htmlTitle") val htmlTitle : String,
     @SerializedName("link") val link : String,
     @SerializedName("displayLink") val displayLink : String,

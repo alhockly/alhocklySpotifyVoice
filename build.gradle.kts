@@ -24,6 +24,7 @@ dependencies {
     compile("com.github.goxr3plus:java-google-speech-api:V2.1")
     compile("com.google.guava:guava:22.0")
     compile ("com.github.thelinmichael:spotify-web-api-java:master-SNAPSHOT")
+    compile ("com.github.jmdns:jmdns:master-SNAPSHOT")
 
 }
 

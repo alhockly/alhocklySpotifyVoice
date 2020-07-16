@@ -79,6 +79,7 @@ class Spotify {
         return null
     }
 
+    //TODO merge results into one list
     fun GenericSearch(types: String, search: String) : String?{
         var results = spotifyApi.searchItem(types,search).build().execute()
         if(results != null){
@@ -94,8 +95,16 @@ class Spotify {
 
     fun roughGoogle(search: String) {
         var url = GoogleSearch().search(search.trim())
-        var uri = urlToUri(url)
-        requestPlayTrack(uri)
+        if(url != null){
+            var uri = urlToUri(url)
+            if(uri != null){
+                requestPlayTrack(uri)
+            } else {
+                print("failed to find uri for playback")
+            }
+        } else {
+            print("no results found on google")
+        }
     }
 
     fun playUri(uri: String) {
@@ -138,10 +147,14 @@ class Spotify {
 
 
     fun pausePlayback(pause : Boolean){
-        if(!pause){
-            spotifyApi.pauseUsersPlayback().build().execute()
-        } else {
-            spotifyApi.startResumeUsersPlayback().device_id(deviceId).build().execute()
+        try {
+            if (!pause) {
+                spotifyApi.pauseUsersPlayback().build().execute()
+            } else {
+                spotifyApi.startResumeUsersPlayback().device_id(deviceId).build().execute()
+            }
+        }catch (e : Exception){
+            print("exception for playing when u should pause or vice versa")
         }
     }
 
@@ -154,7 +167,7 @@ class Spotify {
 
     }
 
-    fun urlToUri(url : String) : String{
+    fun urlToUri(url : String) : String?{
         var parts = url.split("/")
         var newuri = parts[parts.size-1]
 
@@ -173,7 +186,7 @@ class Spotify {
         if (url.contains(UrlType.ALBUM.value)){
             return "spotify:album:"+newuri
         }
-        return ""
+        return null
     }
     //https://open.spotify.com/track/5hqh0JUxRShhqdaxu7wlz5?si=9Z98g3YoRK-ZeG7ujsf4kw
     //spotify:track:5hqh0JUxRShhqdaxu7wlz5

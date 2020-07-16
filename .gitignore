@@ -3,3 +3,5 @@
 build\classes\*
 build/kotlin
 .idea/workspace.xml
+build/classes/
+build/test-results/test/binary/output.bin

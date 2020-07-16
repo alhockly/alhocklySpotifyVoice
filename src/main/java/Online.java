@@ -9,18 +9,6 @@ import java.net.URL;
 public class Online {
 
 
-    public static void main(String[] args) {
-        //test/usage example
-        try {
-            new Online().OpenYoutube("a lot","21 savage");
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-
-
     public void OpenYoutube(String trackname, String artist) throws IOException, URISyntaxException {
         System.out.println("opening "+trackname+" - "+artist);
         String html = wget("https://www.youtube.com/results?search_query="+trackname.trim().replace(" ","+")+"+"+artist.trim().replace(" ","+"));
