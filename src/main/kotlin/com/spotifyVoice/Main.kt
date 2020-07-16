@@ -1,18 +1,38 @@
 package com.spotifyVoice
 
+import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
+import authorization.authorization_code.com.spotifyVoice.mDnsInteractor
+import authorization.authorization_code.com.spotifyVoice.mDnsService
 import java.io.IOException
 import java.io.BufferedReader
 import java.io.File
+import java.net.Inet4Address
 import java.util.concurrent.TimeUnit
 
 
-class Main {
+class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
+    override fun addAddressToLocalMap(address: Pair<String, Inet4Address>) {
+        localNetworkMap.putIfAbsent(address.first, address.second)
+    }
+
+    override fun removeAddressFromLocalMap(inet: Inet4Address) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun localNetworkMap(): Map<String, Inet4Address> {
+        return localNetworkMap
+    }
+
+
+    var localNetworkMap = mutableMapOf<String,Inet4Address>()
+
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
             //TODO create spotify object here (and create interface)?
-
-            var speechRec = SpeechRec()
+            var main = Main()
+            var speechRec = SpeechRec(main)
+            var mdns = mDnsService(main)
 
             Runtime.getRuntime().addShutdownHook(object : Thread() {
                 override fun run() {

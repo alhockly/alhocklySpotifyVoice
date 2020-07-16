@@ -1,6 +1,8 @@
 package com.spotifyVoice
 
 import authorization.authorization_code.com.spotifyVoice.Online
+import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
+import authorization.authorization_code.com.spotifyVoice.SpeechRecThread
 import com.darkprograms.speech.microphone.Microphone
 import com.darkprograms.speech.recognizer.GSpeechDuplex
 import net.sourceforge.javaflacencoder.FLACFileWriter
@@ -10,11 +12,11 @@ import javax.sound.sampled.LineUnavailableException
 import kotlin.system.exitProcess
 
 
-class SpeechRec {
+class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecInteractor.SpeechInter {
     private lateinit var  mic : Microphone
     private val duplex = GSpeechDuplex("AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw")
 
-
+    var main = mainClassInterator
     var spotify = Spotify()
     var speechHandled = false
     var speechRecThread : Thread? = null
@@ -38,6 +40,7 @@ class SpeechRec {
 
 
     fun handleSpeech(text : String){
+        var words = text.trim().split(" ")
         speechResponseListener.ignore = true
         //search for a track
         if (text.contains("play") && text.contains("by")){
@@ -63,12 +66,26 @@ class SpeechRec {
             return
         }
 
-        if(text.contains("turn the lights off")){
-            //Online().wget("http://lights.local/off")
+
+
+        if((text.contains("switch") || text.contains("turn")) && (text.contains("on") || text.contains("off")) && text.contains("lights")){
+            var networkMap = main.localNetworkMap()
+            var lightsAddress =  networkMap.get("lights")
+            var switch = if(text.contains("on")){
+                "/on"
+            }else{
+                "/off"
+            }
+
+            if(lightsAddress != null){
+                var link = "http://"+lightsAddress.hostAddress.replace("/","")+ switch
+                Online().wget(link)
+            } else {
+                print("lights ip address could not be resolved")
+            }
             speechHandled = true
             return
         }
-
 
         speechHandled = true
     }
@@ -105,21 +122,16 @@ class SpeechRec {
             } catch (e : Exception){
 
             }
-        }
+            //the GSpeechDuplex object can throw a IOException
+            Thread.setDefaultUncaughtExceptionHandler { t, e ->
 
-        var thread = Thread()
-       
-
-        //the GSpeechDuplex object can throw a IOException
-        speechRecThread.setDefaultUncaughtExceptionHandler { t, e ->
-
-            if(!(e is ThreadDeath)){
-                println("Caught $e")
+                if(!(e is ThreadDeath)){
+                    println("Caught $e")
+                }
             }
         }
 
         speechRecThread!!.start()
-
         speechRecTimeoutThread.run()
 
     }

@@ -35,28 +35,28 @@ public class jdnsTest {
 
     public static void main(String[] args) throws InterruptedException, IOException {
 
-        JmDNSImpl jmdns = new JmDNSImpl(null, null);
-       // ServiceInfo.create()
-        //jmdns.startServiceInfoResolver(ServiceInfoImpl..create("_http._tcp.local","lights",80,"lights"));
-        final HostInfo hostInfo = HostInfo.newHostInfo(InetAddress.getByName("192.168.1.118"), jmdns, null);
-        System.out.println("MDNS hostname (Bonjour): " + hostInfo.getName());
-        System.out.println("DNS hostname: " + hostInfo.getInetAddress().getHostName());
-        System.out.println("IP address: " + hostInfo.getInetAddress().getHostAddress());
-        jmdns.close();
+//        JmDNSImpl jmdns = new JmDNSImpl(null, null);
+//       // ServiceInfo.create()
+//        //jmdns.startServiceInfoResolver(ServiceInfoImpl..create("_http._tcp.local","lights",80,"lights"));
+//        final HostInfo hostInfo = HostInfo.newHostInfo(InetAddress.getByName("192.168.1.118"), jmdns, null);
+//        System.out.println("MDNS hostname (Bonjour): " + hostInfo.getName());
+//        System.out.println("DNS hostname: " + hostInfo.getInetAddress().getHostName());
+//        System.out.println("IP address: " + hostInfo.getInetAddress().getHostAddress());
+//        jmdns.close();
 
-//        try {
-//            // Create a JmDNS instance
-//            JmDNS jmdns = JmDNS.create(InetAddress.getLocalHost());
-//
-//            // Add a service listener
-//            jmdns.addServiceListener("_http._tcp.local.", new SampleListener());
-//
-//            // Wait a bit
-//            Thread.sleep(30000);
-//        } catch (UnknownHostException e) {
-//            System.out.println(e.getMessage());
-//        } catch (IOException e) {
-//            System.out.println(e.getMessage());
-//        }
+        try {
+            // Create a JmDNS instance
+            JmDNS jmdns = JmDNS.create(InetAddress.getLocalHost());
+
+            // Add a service listener
+            jmdns.addServiceListener("_http._tcp.local.", new SampleListener());
+
+            // Wait a bit
+            Thread.sleep(30000);
+        } catch (UnknownHostException e) {
+            System.out.println(e.getMessage());
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
     }
 }

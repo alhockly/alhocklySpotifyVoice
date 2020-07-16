@@ -22,5 +22,8 @@ class SpeechRecThread(duplex: GSpeechDuplex, mic : Microphone) : Runnable {
         }
     }
 
+    fun Thread.UncaughtExceptionHandler(){
+
+    }
 
 }
