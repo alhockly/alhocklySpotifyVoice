@@ -11,5 +11,6 @@ interface SpeechRecInteractor {
 
     interface MainInter{
         fun localNetworkMap() : Map<String,Inet4Address>
+        fun startFridayRec()
     }
 }

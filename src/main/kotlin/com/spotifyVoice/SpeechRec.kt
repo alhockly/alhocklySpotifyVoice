@@ -21,7 +21,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
     var speechHandled = false
     var speechRecThread : Thread? = null
     var speechRecTimeoutThread = speechRecTimeout(duplex,this)
-    var speechResponseListener = SpeechResponseListener(speechRecTimeoutThread,this)
+    var speechResponseListener = SpeechResponseListener(speechRecTimeoutThread,this, mainClassInterator)
 
     init{
         try{
