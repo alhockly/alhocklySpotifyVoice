@@ -2,7 +2,6 @@ package com.spotifyVoice
 
 import authorization.authorization_code.com.spotifyVoice.Online
 import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
-import authorization.authorization_code.com.spotifyVoice.SpeechRecThread
 import com.darkprograms.speech.microphone.Microphone
 import com.darkprograms.speech.recognizer.GSpeechDuplex
 import net.sourceforge.javaflacencoder.FLACFileWriter
@@ -13,14 +12,14 @@ import kotlin.system.exitProcess
 
 
 class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecInteractor.SpeechInter {
-    private lateinit var  mic : Microphone
-    private val duplex = GSpeechDuplex("AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw")
+    private  var  mic : Microphone
+    val duplex = GSpeechDuplex("AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw")
 
     var main = mainClassInterator
     var spotify = Spotify()
     var speechHandled = false
     var speechRecThread : Thread? = null
-    var speechRecTimeoutThread = speechRecTimeout(duplex,this)
+    var speechRecTimeoutThread = speechRecTimeout(duplex,this,mainClassInterator)
     var speechResponseListener = SpeechResponseListener(speechRecTimeoutThread,this, mainClassInterator)
 
     init{
@@ -97,22 +96,53 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
         var inputartist = text.substring(text.indexOf( " by ") + 3)
 
         var topResult = spotify.requestSearchTrack("$inputsong $inputartist")
+        //TODO get list here and calc leven for condtion for if below
         if(topResult!= null) {
             spotify.requestPlayTrack(topResult)
         }else{
             println("\nno matching track found in spotify search")
-            spotify.roughGoogle("$inputsong$inputartist")
+            //TODO search spoify using only first syllabel for each for of input
+            var int =  inputsong.split(" ")
+            inputsong = ""
+            for(s in int){
+                if(s.length == 1){ continue}
+                inputsong += s.substring(0,2)+" "
+            }
+            var artist = inputartist.trim().split(" ")
+            inputartist = ""
+            for(a in artist){
+                if(a.length == 1){ continue}
+                inputartist += a.substring(0,2)+" "
+            }
+            inputsong = inputsong.trim()
+            inputartist = inputartist.trim()
+            var firstSyllableSearch = spotify.requestSearchTrack("$inputsong $inputartist")
+            if(firstSyllableSearch != null) {
+                spotify.requestPlayTrack(firstSyllableSearch)
+            }
+            else{
+                spotify.roughGoogle("$inputsong$inputartist")
+            }
         }
     }
 
 
     fun startSpeechRecognition() {
-        //Start a new Thread so our application don't lags
+        duplex.stopSpeechRecognition()
+        val threadSet = Thread.getAllStackTraces()
+        for( thread in Thread.getAllStackTraces().keys){
+            if(thread.name.equals("Downstream Thread")){
+                thread.stop()
+            }
+        }
 
+        //Start a new Thread so our application don't lags
         speechRecThread = Thread {
             //println("\nspeech rec thread open\n")
             try {
                 duplex.recognize(mic.targetDataLine, mic.audioFormat)
+
+
             } catch (e: LineUnavailableException) {
                 e.printStackTrace()
             } catch (e: InterruptedException) {
@@ -122,14 +152,11 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             } catch (e : Exception){
 
             }
-            //the GSpeechDuplex object can throw a IOException
-            Thread.setDefaultUncaughtExceptionHandler { t, e ->
 
-                if(!(e is ThreadDeath)){
-                    println("Caught $e")
-                }
-            }
         }
+
+
+        print("")
 
         speechRecThread!!.start()
         speechRecTimeoutThread.run()
@@ -152,13 +179,15 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
     }
 
 
-    class speechRecTimeout(Gspeech : GSpeechDuplex, speechRec: SpeechRec) : Runnable {
+    class speechRecTimeout(Gspeech : GSpeechDuplex, speechRec: SpeechRec, mainClass: SpeechRecInteractor.MainInter) : Runnable {
         val duplex = Gspeech
         val speechRecClass = speechRec
         var cancel = false
 
+        var main = mainClass
+
         override fun run() {
-            var count = 10
+            var count = 6
             for (i in 0..count){
                 //println(i)
                 Thread.sleep(1000)
@@ -171,6 +200,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             speechRecClass.speechHandled = true
             Thread.sleep(1000)
             println("\nspeech rec timed out")
+            main.startFridayRec()
         }
     }
 }

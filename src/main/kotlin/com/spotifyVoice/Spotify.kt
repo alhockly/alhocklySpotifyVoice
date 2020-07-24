@@ -5,32 +5,41 @@ import authorization.authorization_code.com.spotifyVoice.GoogleSearch
 import com.google.gson.JsonArray
 import com.wrapper.spotify.SpotifyApi
 import com.wrapper.spotify.exceptions.SpotifyWebApiException
+import com.wrapper.spotify.exceptions.detailed.NotFoundException
 import com.wrapper.spotify.exceptions.detailed.UnauthorizedException
 import org.apache.hc.core5.http.ParseException
 import java.io.*
 import java.lang.Exception
+import java.lang.IndexOutOfBoundsException
+import java.lang.NumberFormatException
 import java.net.URI
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletionException
 
 class Spotify {
+    var userprefs = readUserPrefsFromFile()
+
     var redirectUrl = "http://localhost/"
-    var deviceId: String? = "549fec7e69c54b8e1ff5798313f3be6d10a5bd7a"
+    var deviceId: String? = null
     var spotifyApi = SpotifyApi.Builder()
-        .setClientId("5df25986187c4d4fa2e00f6a1285372a")
-        .setClientSecret("9d3d0d78a4b249c180185297830e5224")
         .setRedirectUri(URI.create(redirectUrl))
         .build()
 
-    var userprefs = readUserPrefsFromFile()
+
 
 
     init {
         if (userprefs == null) {
-            userprefs = Userprefs(null, null, null, deviceId)
+            userprefs = Userprefs(null, null, null,null,null, null)
         } else {
+            spotifyApi = SpotifyApi.Builder()
+                .setClientId(userprefs!!.clientID)
+                .setClientSecret(userprefs!!.clientSecret)
+                .setRedirectUri(URI.create(redirectUrl))
+                .build()
             spotifyApi.accessToken = userprefs!!.accessToken
             spotifyApi.refreshToken = userprefs!!.refreshToken
+            deviceId = userprefs!!.deviceId
         }
         if (!isAuthorised()) {
             authorizationCodeUri_Sync()
@@ -109,20 +118,55 @@ class Spotify {
 
     fun playUri(uri: String) {
         if (deviceId == null) {
-            var devices = spotifyApi.usersAvailableDevices.build().execute()
-            deviceId = devices[1].id
+            userSelectPlaybackDevice()
         }
-        if (uri.contains("track")) {
-            var array = JsonArray()
-            array.add(uri)
-            spotifyApi.startResumeUsersPlayback().uris(array).device_id(deviceId).build().execute()
-        }
-        if (uri.contains("artist") || uri.contains("album") || uri.contains("playlist")) {
-            spotifyApi.startResumeUsersPlayback().context_uri(uri).device_id(deviceId).build().execute()
+        try {
+
+            if (uri.contains("track")) {
+                var array = JsonArray()
+                array.add(uri)
+                spotifyApi.startResumeUsersPlayback().uris(array).device_id(deviceId).build().execute()
+            }
+            if (uri.contains("artist") || uri.contains("album") || uri.contains("playlist")) {
+                spotifyApi.startResumeUsersPlayback().context_uri(uri).device_id(deviceId).build().execute()
+            }
+        } catch (e : NotFoundException){
+            userSelectPlaybackDevice()
+            playUri(uri)
         }
 
         println("playing $uri")
 
+    }
+
+    fun userSelectPlaybackDevice(){
+        var devices = spotifyApi.usersAvailableDevices.build().execute()
+        var count = 1
+        for (d in devices){
+            println("$count. ${d.name} - ${d.type}")
+            count++
+        }
+        print("please enter the number of the device you wish to use:     ")
+        var inputBad = true
+        var input : String?
+        var cleanedInput : Int
+        while(inputBad) {
+            input = readLine()
+            try{
+                cleanedInput = input!!.toInt()
+
+                try {
+                    deviceId = devices[cleanedInput-1].id
+                    inputBad = false
+                } catch (e : IndexOutOfBoundsException){
+                    print("please enter a number in the list above:      ")
+                }
+
+            } catch (e : NumberFormatException){
+                print("please enter a number:     ")
+            }
+        }
+        writeAuthCodeToFile(Userprefs(userprefs?.accessToken, userprefs?.refreshToken, userprefs?.authCode,userprefs?.clientID, userprefs?.clientSecret, deviceId))
     }
 
     fun requestPlayTrack(uri: String) {
@@ -154,6 +198,7 @@ class Spotify {
                 spotifyApi.startResumeUsersPlayback().device_id(deviceId).build().execute()
             }
         }catch (e : Exception){
+            e.printStackTrace()
             print("exception for playing when u should pause or vice versa")
         }
     }
@@ -246,14 +291,28 @@ class Spotify {
     }
 
     fun authorizationCodeUri_Sync() {
-    val uri = spotifyApi.authorizationCodeUri()
-        .scope("user-read-playback-state,user-modify-playback-state,streaming,user-top-read")
-        .show_dialog(true)
-        .build().execute()
+        if(userprefs!!.clientID == null){
+            print("enter clientID: ")
+            userprefs!!.clientID = readLine()
+        }
+        if(userprefs!!.clientSecret == null){
+            print("enter clientSecret:  ")
+            userprefs!!.clientSecret = readLine()
+        }
+        spotifyApi = SpotifyApi.Builder()
+            .setClientId(userprefs!!.clientID)
+            .setClientSecret(userprefs!!.clientSecret)
+            .setRedirectUri(URI.create(redirectUrl))
+            .build()
 
-    println("URI: $uri")
-    print("Enter code: ")
-    authorizationCode_Sync(readLine()!!.replace(redirectUrl,""))
+        val uri = spotifyApi.authorizationCodeUri()
+            .scope("user-read-playback-state,user-modify-playback-state,streaming,user-top-read")
+            .show_dialog(true)
+            .build().execute()
+
+        println("URI: $uri")
+        print("Enter code: ")
+        authorizationCode_Sync(readLine()!!.replace(redirectUrl,""))
     }
 
     fun authorizationCode_Sync(code : String) : Boolean{
@@ -309,8 +368,6 @@ class Spotify {
 
     }
 
-    data class Userprefs(var accessToken : String? , var refreshToken : String?, var authCode : String?, var deviceId : String?) :Serializable{
-
-    }
+    data class Userprefs(var accessToken : String? , var refreshToken : String?, var authCode : String?, var clientID : String?, var clientSecret : String? , var deviceId : String?) :Serializable
 
 }

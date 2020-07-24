@@ -17,9 +17,9 @@ class GoogleSearch {
 
         if(results != null && results.items != null) {
             for (res in results.items) {
-                var title = res.title.replace(" on Spotify", "").replace(" | Spotify Playlist", "")
-                title = title.replace(" - playlist", "").replace(" | Spotify", "").replace(" - a song by","")
-                title = title.replace("...","").replace(" - song by","").replace(" - Single by","")
+                var title = res.title.toLowerCase().replace(" on spotify", "").replace(" | spotify playlist", "")
+                title = title.replace(" - playlist", "").replace(" | spotify", "").replace(" - a song by","")
+                title = title.replace("...","").replace(" - song by","").replace(" - single by","")
                 res.title = title
                 levenlist.add(Pair(res, calculateLeven(title.trim(), term)))
             }

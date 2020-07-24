@@ -18,8 +18,23 @@ class SpotifyApiTests {
         }
     }
 
+    @Test
+    fun playSpotify(){
+        spotify.requestPausePlayback(true)
+    }
+
     fun search(term : String, type : String){
         var res = spotify.spotifyApi.searchItem(term, type).build().execute()
         print(res)
+    }
+
+
+    @Test
+    fun deviceSelect(){
+        spotify.deviceId = null
+        if (spotify.checkAuthStatus()) {
+            spotify.userSelectPlaybackDevice()
+        }
+
     }
 }

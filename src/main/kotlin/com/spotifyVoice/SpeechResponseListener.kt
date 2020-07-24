@@ -18,9 +18,13 @@ class SpeechResponseListener(speechRecTimeout: SpeechRec.speechRecTimeout, speec
             if (output != null && gr.isFinalResponse) {
                 println(output)
                 sp.stopSpeechRecognition()
-                sp.handleSpeech(gr.response.toLowerCase())
+                try {
+                    sp.handleSpeech(gr.response.toLowerCase())
+                } catch (e : Exception){
+                    e.printStackTrace()
+                }
                 main.startFridayRec()
-                //TODO remove loop byt using this
+                //TODO remove loop by using this
                 return
             }
         }

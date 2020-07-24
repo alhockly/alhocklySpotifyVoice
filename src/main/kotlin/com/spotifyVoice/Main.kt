@@ -37,6 +37,7 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
     var mdns = mDnsService(this)
 
     fun start(){
+
             speechRec.speechResponseListener.ignore = true
             runpython(ostype)
             speechRec.speechHandled = false
@@ -57,8 +58,9 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
             Runtime.getRuntime().addShutdownHook(object : Thread() {
                 override fun run() {
                     print("shutting down")
-                    //shut download java processes
+                    //kill all java processes
                     when (getOs()) {
+                        //TODO add macOS and Linux versions
                         OsCheck.OSType.Windows -> runOScommand(mutableListOf("taskkill", "/f", "/im", "java.exe"))
                     }
                 }
