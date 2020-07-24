@@ -132,7 +132,8 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
         val threadSet = Thread.getAllStackTraces()
         for( thread in Thread.getAllStackTraces().keys){
             if(thread.name.equals("Downstream Thread")){
-                thread.stop()
+               // thread.stop()
+                ///find better way to end old threads
             }
         }
 

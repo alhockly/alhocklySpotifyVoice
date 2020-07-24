@@ -198,7 +198,7 @@ class Spotify {
                 spotifyApi.startResumeUsersPlayback().device_id(deviceId).build().execute()
             }
         }catch (e : Exception){
-            e.printStackTrace()
+            //e.printStackTrace()
             print("exception for playing when u should pause or vice versa")
         }
     }
