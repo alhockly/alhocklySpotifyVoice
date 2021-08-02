@@ -23,6 +23,5 @@ data class Items (
 	@SerializedName("htmlSnippet") val htmlSnippet : String,
 	@SerializedName("cacheId") val cacheId : String,
 	@SerializedName("formattedUrl") val formattedUrl : String,
-	@SerializedName("htmlFormattedUrl") val htmlFormattedUrl : String,
-	@SerializedName("pagemap") val pagemap : Pagemap
+	@SerializedName("htmlFormattedUrl") val htmlFormattedUrl : String
 )

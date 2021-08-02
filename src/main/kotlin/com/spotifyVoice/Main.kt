@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit
 
 
 class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
+
+    var waitingForHotWord = false
+
     override fun addAddressToLocalMap(address: Pair<String, Inet4Address>) {
         localNetworkMap.putIfAbsent(address.first, address.second)
     }
@@ -27,7 +30,9 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
     }
 
     override fun startFridayRec() {
-        start()
+        if(!waitingForHotWord) {
+            start()
+        }
     }
 
 
@@ -37,9 +42,10 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
     var mdns = mDnsService(this)
 
     fun start(){
-
+            waitingForHotWord = true
             speechRec.speechResponseListener.ignore = true
             runpython(ostype)
+            waitingForHotWord = false
             speechRec.speechHandled = false
             speechRec.speechResponseListener.ignore = false
             try {
@@ -86,7 +92,7 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
                         "python3",
                         "porcupine_hotword.py",
                         "--keyword_file_paths",
-                        "friday_limux.ppn"
+                        "friday_linux.ppn"
                     )
                 )
                 OsCheck.OSType.Windows -> runOScommand(
@@ -105,10 +111,6 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
             //println("hotword detected!\n")
         }
 
-        fun OS(){
-            var res = Runtime.getRuntime().exec("echo ofsd")
-            print("d")
-        }
 
         fun runOScommand(command: MutableList<String>) {
             val proc = ProcessBuilder(command)

@@ -1,16 +1,17 @@
 package com.spotifyVoice
 
-
 import authorization.authorization_code.com.spotifyVoice.GoogleSearch
 import com.google.gson.JsonArray
 import com.wrapper.spotify.SpotifyApi
 import com.wrapper.spotify.exceptions.SpotifyWebApiException
 import com.wrapper.spotify.exceptions.detailed.NotFoundException
 import com.wrapper.spotify.exceptions.detailed.UnauthorizedException
+import com.wrapper.spotify.model_objects.specification.Track
 import org.apache.hc.core5.http.ParseException
 import java.io.*
 import java.lang.Exception
 import java.lang.IndexOutOfBoundsException
+import java.lang.NullPointerException
 import java.lang.NumberFormatException
 import java.net.URI
 import java.util.concurrent.CancellationException
@@ -24,8 +25,6 @@ class Spotify {
     var spotifyApi = SpotifyApi.Builder()
         .setRedirectUri(URI.create(redirectUrl))
         .build()
-
-
 
 
     init {
@@ -44,23 +43,24 @@ class Spotify {
         if (!isAuthorised()) {
             authorizationCodeUri_Sync()
         }
+        //trackwatcher = currentSongWatcher(this)
+        //trackwatcher.run()
     }
 
-    fun requestSearchTrack(searchTerm : String): String? {
+    fun requestSearchTrack(searchTerm : String): Array<Track>? {
         try {
             return searchTrack(searchTerm)
-
         } catch (e: UnauthorizedException) {
             if (checkAuthStatus()) {
                 return searchTrack(searchTerm)
             }
+        } catch (e : NoClassDefFoundError){
+            println("Exception: Could not complete search")
         }
-
         return null
     }
 
-    fun searchTrack(searchTerm : String): String? {
-
+    fun searchTrack(searchTerm : String): Array<Track>? {
         var search = spotifyApi.searchTracks(searchTerm).build().execute()
         if (search.items.isNotEmpty()) {
             //look through array and find most accurate match
@@ -69,16 +69,14 @@ class Spotify {
                 println("${track.artists[0].name} - ${track.name} | ${track.album.name}")
             }
             println(":::::::::::::::::::::::::::::::::::::")
-            return search.items[0].uri
+            return search.items
         }
         return null
-
     }
 
     fun requestGenericSearch(types : String, search : String) : String?{
         try {
             return GenericSearch(search, types)
-
         } catch (e: UnauthorizedException) {
             if (checkAuthStatus()) {
                 return GenericSearch(search, types)
@@ -88,7 +86,6 @@ class Spotify {
         return null
     }
 
-    //TODO merge results into one list
     fun GenericSearch(types: String, search: String) : String?{
         var results = spotifyApi.searchItem(types,search).build().execute()
         if(results != null){
@@ -102,26 +99,45 @@ class Spotify {
         return null
     }
 
-    fun roughGoogle(search: String) {
-        var url = GoogleSearch().search(search.trim())
-        if(url != null){
-            var uri = urlToUri(url)
-            if(uri != null){
-                requestPlayTrack(uri)
-            } else {
-                print("failed to find uri for playback")
+    fun requestGoogle(inputtrack :String, inputArtist : String) : HashMap<String, List<String>>? {
+        var spotifysearchEngineKey = "525538dae59e71f3a"
+        var yotubesearchEngineKey = "7248d67f8cfc164a3"
+
+        try {
+            println("google + spotify")
+            var googleData = GoogleSearch().search("$inputArtist - $inputtrack", spotifysearchEngineKey)
+            if (googleData == null || googleData.isEmpty()) {
+                println("google + youtube")
+                googleData = GoogleSearch().search("$inputArtist - $inputtrack", yotubesearchEngineKey)
+            } else{
+                if(googleData.size <5){ // or levendists are bad?
+                    println("google + youtube")
+                    var youtubeGoogleData = GoogleSearch().search("$inputArtist - $inputtrack", yotubesearchEngineKey)
+                    if(youtubeGoogleData != null) {
+                        youtubeGoogleData.forEach{
+                            if(googleData.containsKey(it.key)){
+                                var list = googleData.get(it.key)!!.toMutableList()
+                                it.value.forEach { list.add(it) }
+                                googleData.replace(it.key, list)
+                            } else{
+                                googleData.put(it.key, it.value)
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            print("no results found on google")
+            return googleData
+        }catch (e: NullPointerException){
+            e.printStackTrace()
+        } catch (e : Exception){
+            print("google request failed cuz of $e")
         }
+        return null
     }
 
     fun playUri(uri: String) {
-        if (deviceId == null) {
-            userSelectPlaybackDevice()
-        }
+        if (deviceId == null) { userSelectPlaybackDevice() }
         try {
-
             if (uri.contains("track")) {
                 var array = JsonArray()
                 array.add(uri)
@@ -133,10 +149,10 @@ class Spotify {
         } catch (e : NotFoundException){
             userSelectPlaybackDevice()
             playUri(uri)
+        } catch (e : Exception){
+            e.printStackTrace()
         }
-
         println("playing $uri")
-
     }
 
     fun userSelectPlaybackDevice(){
@@ -154,41 +170,58 @@ class Spotify {
             input = readLine()
             try{
                 cleanedInput = input!!.toInt()
-
-                try {
-                    deviceId = devices[cleanedInput-1].id
-                    inputBad = false
-                } catch (e : IndexOutOfBoundsException){
-                    print("please enter a number in the list above:      ")
-                }
+                deviceId = devices[cleanedInput-1].id
+                break
 
             } catch (e : NumberFormatException){
                 print("please enter a number:     ")
+            } catch (e : IndexOutOfBoundsException){
+                print("please enter a number in the list above:      ")
             }
         }
         writeAuthCodeToFile(Userprefs(userprefs?.accessToken, userprefs?.refreshToken, userprefs?.authCode,userprefs?.clientID, userprefs?.clientSecret, deviceId))
     }
 
-    fun requestPlayTrack(uri: String) {
+
+
+    fun requestRecommendations(itemID : String) : List<String>?{
         try {
-            playUri(uri)
+            return getReccomendations(itemID)
         } catch (e: UnauthorizedException) {
             if (checkAuthStatus()) {
-                playUri(uri)
+                return getReccomendations(itemID)
+            }
+        }
+        return null
+    }
+
+    fun requestApiFunction(function : () -> Unit){
+        //USE this to safely call api functions that dont return anything
+        try {
+            return function.invoke()
+        } catch (e: UnauthorizedException) {
+            if (checkAuthStatus()) {
+               return function.invoke()
             }
         }
     }
 
-    fun requestPausePlayback(pause: Boolean) {
-        try {
-            pausePlayback(pause)
-        } catch (e: UnauthorizedException) {
-            if (checkAuthStatus()) {
-                pausePlayback(pause)
-            }
+    fun addUrisToQueue(trackUris : List<String>){
+        trackUris.forEach {
+            spotifyApi.addItemToUsersPlaybackQueue(it).build().execute()
         }
+        print("added ${trackUris.size} tracks to queue")
     }
 
+    fun getReccomendations(itemID : String) : List<String>? {
+        var data =spotifyApi.recommendations.seed_tracks(itemID).build().execute()
+        if(data!= null && data.tracks.isNotEmpty()){
+            var list = data.tracks.map { it.uri }
+            print("")
+            return list
+        }
+        return null
+    }
 
     fun pausePlayback(pause : Boolean){
         try {
@@ -203,38 +236,6 @@ class Spotify {
         }
     }
 
-
-    enum class UrlType(val value : String){
-        TRACK("/track/"),
-        ARTIST("/artist/"),
-        PLAYLIST("/playlist/"),
-        ALBUM("/album/")
-
-    }
-
-    fun urlToUri(url : String) : String?{
-        var parts = url.split("/")
-        var newuri = parts[parts.size-1]
-
-        if(newuri.contains("?")){
-            newuri = newuri.substring(0,newuri.indexOf("?"))
-        }
-        if(url.contains(UrlType.TRACK.value)){
-            return "spotify:track:"+newuri
-        }
-        if(url.contains(UrlType.ARTIST.value)){
-            return "spotify:artist:"+newuri
-        }
-        if(url.contains(UrlType.PLAYLIST.value)){
-            return "spotify:playlist:"+newuri
-        }
-        if (url.contains(UrlType.ALBUM.value)){
-            return "spotify:album:"+newuri
-        }
-        return null
-    }
-    //https://open.spotify.com/track/5hqh0JUxRShhqdaxu7wlz5?si=9Z98g3YoRK-ZeG7ujsf4kw
-    //spotify:track:5hqh0JUxRShhqdaxu7wlz5
 
     fun isAuthorised() : Boolean {
         if(userprefs!=null){
@@ -258,8 +259,8 @@ class Spotify {
 
     fun readUserPrefsFromFile() : Userprefs?{
         try {
-            ObjectInputStream(FileInputStream(File("spotify.auth"))).use { it ->
-                //Read the family back from the file
+            ObjectInputStream(FileInputStream(File("spotify.auth"))).use {
+                //Read the prefs back from the file
                 return it.readObject() as Userprefs
             }
         }catch (e : FileNotFoundException){
@@ -270,6 +271,10 @@ class Spotify {
     }
 
     fun writeAuthCodeToFile(userprefs: Userprefs){
+        //TODO check file exists and create if not
+        if(File("spotify.auth").exists()){
+
+        }
         try {
             ObjectOutputStream(FileOutputStream(File("spotify.auth"))).use { it -> it.writeObject(userprefs) }
         } catch (e : Exception){
@@ -286,7 +291,6 @@ class Spotify {
         if(res.accessToken != null){
             spotifyApi.accessToken=res.accessToken
         }
-
         return true
     }
 
@@ -368,6 +372,7 @@ class Spotify {
 
     }
 
-    data class Userprefs(var accessToken : String? , var refreshToken : String?, var authCode : String?, var clientID : String?, var clientSecret : String? , var deviceId : String?) :Serializable
 
+
+    data class Userprefs(var accessToken : String? , var refreshToken : String?, var authCode : String?, var clientID : String?, var clientSecret : String? , var deviceId : String?) :Serializable
 }

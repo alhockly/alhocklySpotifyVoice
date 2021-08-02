@@ -2,8 +2,12 @@ package com.spotifyVoice
 
 import authorization.authorization_code.com.spotifyVoice.Online
 import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
-import com.darkprograms.speech.microphone.Microphone
-import com.darkprograms.speech.recognizer.GSpeechDuplex
+import authorization.authorization_code.com.spotifyVoice.Util
+import com.goxr3plus.speech.microphone.Microphone
+import com.goxr3plus.speech.recognizer.GSpeechDuplex
+import com.wrapper.spotify.model_objects.specification.Track
+//import com.darkprograms.speech.microphone.Microphone
+//import com.darkprograms.speech.recognizer.GSpeechDuplex
 import net.sourceforge.javaflacencoder.FLACFileWriter
 import java.io.IOException
 import java.lang.IllegalArgumentException
@@ -13,13 +17,14 @@ import kotlin.system.exitProcess
 
 class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecInteractor.SpeechInter {
     private  var  mic : Microphone
-    val duplex = GSpeechDuplex("AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw")
-
     var main = mainClassInterator
+    val duplex = GSpeechDuplex("AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw", main)
+
+
     var spotify = Spotify()
     var speechHandled = false
     var speechRecThread : Thread? = null
-    var speechRecTimeoutThread = speechRecTimeout(duplex,this,mainClassInterator)
+    var speechRecTimeoutThread = speechRecTimeout(duplex,this, mainClassInterator)
     var speechResponseListener = SpeechResponseListener(speechRecTimeoutThread,this, mainClassInterator)
 
     init{
@@ -34,6 +39,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
         duplex.language = "en"
         duplex.addResponseListener(speechResponseListener)
 
+        //TODO load google api key here
     }
 
 
@@ -53,14 +59,14 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             var term = text.substring(text.indexOf("play")+5, text.indexOf("on spotify"))
             var search = spotify.requestGenericSearch("artist,album",term)
             if(search != null){
-                spotify.requestPlayTrack(search)
+               spotify.requestApiFunction {  spotify.playUri(search)}
             }
             speechHandled = true
             return
         }
 
         if(text.contains("play spotify") || text.contains("pause spotify")){
-            spotify.requestPausePlayback(text.contains("play"))
+            spotify.requestApiFunction { spotify.pausePlayback((text.contains("play")))}
             speechHandled = true
             return
         }
@@ -92,37 +98,85 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
 
 
     fun spotifyPlayTrack(text : String){
-        var inputsong = text.substring(text.indexOf("play ") + 5, text.indexOf(" by "))
-        var inputartist = text.substring(text.indexOf( " by ") + 3)
+        var inputsong = text.substring(text.indexOf("play ") + 5, text.indexOf(" by ")).trim()
+        var inputartist = text.substring(text.indexOf( " by ") + 3).trim()
 
-        var topResult = spotify.requestSearchTrack("$inputsong $inputartist")
-        //TODO get list here and calc leven for condtion for if below
-        if(topResult!= null) {
-            spotify.requestPlayTrack(topResult)
-        }else{
-            println("\nno matching track found in spotify search")
-            //TODO search spoify using only first syllabel for each for of input
-            var int =  inputsong.split(" ")
-            inputsong = ""
-            for(s in int){
-                if(s.length == 1){ continue}
-                inputsong += s.substring(0,2)+" "
+        //Get some extra info on what the user means via google with the added context of spotify
+        var googleData = spotify.requestGoogle(inputsong, inputartist)
+
+        if(googleData!= null && googleData.isNotEmpty()) {
+            var artistmap = hashMapOf<String, Int>()
+            var trackmap = hashMapOf<String, Int>()
+
+            googleData.get("artist")?.forEach{
+                artistmap.put(it,Util.calculateLeven(it, inputartist))
             }
-            var artist = inputartist.trim().split(" ")
-            inputartist = ""
-            for(a in artist){
-                if(a.length == 1){ continue}
-                inputartist += a.substring(0,2)+" "
+
+            if(artistmap.isNotEmpty()){
+                var topartists = artistmap.toList().sortedBy { (_, value ) -> value }
+                if (topartists[0].second < 8){
+                    inputartist = topartists[0].first
+                    print("assuming proper artist name is  \" $inputartist \" ")
+                }
             }
-            inputsong = inputsong.trim()
-            inputartist = inputartist.trim()
-            var firstSyllableSearch = spotify.requestSearchTrack("$inputsong $inputartist")
-            if(firstSyllableSearch != null) {
-                spotify.requestPlayTrack(firstSyllableSearch)
+
+            googleData.get("track")?.forEach{
+                //may not be nessesary
+                var trackWithoutArtist = it.toLowerCase().replace(inputartist.toLowerCase(),"").trim()
+                //TODO phonetic version of levenstien
+                trackmap.put(trackWithoutArtist, Util.calculateLeven(trackWithoutArtist, inputsong.toLowerCase()))
             }
-            else{
-                spotify.roughGoogle("$inputsong$inputartist")
+
+            if(trackmap.isNotEmpty()){
+                var toptracks = trackmap.toList().sortedBy { (_, value ) -> value }
+                if (toptracks[0].second < 8){
+                    inputsong = toptracks[0].first
+                    print("assuming proper track name is \" $inputsong \" ")
+                }
             }
+        }
+
+        var tracks = spotify.requestSearchTrack("$inputsong $inputartist")
+        if (tracks != null){
+
+            var finalResultMap = HashMap<Track, Int>()
+            tracks.forEach {
+                finalResultMap.put(it, Util.calculateLeven(inputsong.toLowerCase(), Util.trackNameWithNoArtists(it)))
+            }
+            var finalResults = finalResultMap.toList().sortedBy { (_, value ) -> value }
+            if(finalResults.isNotEmpty()) {
+
+                if(finalResults.stream().filter{it.second == finalResults[0].second}.count() > 1){  //is there multiple tracks with the best leven?
+                    //this is to resolve when there are multiple of the same score, prefer explicit and non-
+                    var prioritisedResultMap = HashMap<Track, Int>()
+                    finalResultMap.forEach{
+                        var newVal = it.value
+                        if(it.key.isExplicit){
+                           newVal = newVal -1
+                        }
+                        if(it.key.album.albumType.toString() != "COMPILATION"){
+                            newVal = newVal -1
+                        }
+                        prioritisedResultMap.put(it.key, newVal)
+                    }
+                    finalResults = prioritisedResultMap.toList().sortedBy { (_, value ) -> value }
+                }
+
+                var topResult = finalResults[0]
+
+                if (topResult.second < 40) {    //sanity check
+                    spotify.requestApiFunction { spotify.playUri(topResult.first.uri) }
+                    var queue =  spotify.requestRecommendations(topResult.first.id)
+                    if(queue!=null) {
+                        spotify.requestApiFunction { spotify.addUrisToQueue(queue) }
+                    }
+                    return
+                }
+                print("No closely matching track found")
+            }
+            println("no results for $inputartist - $inputsong")
+        } else {
+            println("no results for $inputartist - $inputsong")
         }
     }
 
@@ -134,6 +188,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             if(thread.name.equals("Downstream Thread")){
                // thread.stop()
                 ///find better way to end old threads
+                //thread.setUncaughtExceptionHandler(Ex)
             }
         }
 
@@ -142,7 +197,6 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             //println("\nspeech rec thread open\n")
             try {
                 duplex.recognize(mic.targetDataLine, mic.audioFormat)
-
 
             } catch (e: LineUnavailableException) {
                 e.printStackTrace()
@@ -153,15 +207,10 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             } catch (e : Exception){
 
             }
-
         }
-
-
-        print("")
 
         speechRecThread!!.start()
         speechRecTimeoutThread.run()
-
     }
 
     /**
@@ -176,15 +225,15 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
        // println("mic closed, long speech rec thread closed")
        // println("speechRecThread already alive? ${speechRecThread!!.isAlive}")
         //println("\nStopping Speech Recognition...." + " , Microphone State is:" + mic.state)
-
     }
 
 
+
     class speechRecTimeout(Gspeech : GSpeechDuplex, speechRec: SpeechRec, mainClass: SpeechRecInteractor.MainInter) : Runnable {
+        //Measures time between starting Google speech rec and getting a response back
         val duplex = Gspeech
         val speechRecClass = speechRec
         var cancel = false
-
         var main = mainClass
 
         override fun run() {

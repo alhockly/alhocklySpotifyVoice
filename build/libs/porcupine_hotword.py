@@ -22,19 +22,19 @@ import sys
 from datetime import datetime
 from threading import Thread
 
+sys.path.append(os.path.join(os.path.dirname(__file__), 'binding/python'))
+
 import numpy as np
 import pyaudio
 import soundfile
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'binding/python'))
 
 from porcupine import Porcupine
 
 import pyglet
 
-import pyaudio
 import wave
-import sys
+
 
 
 import simpleaudio as sa

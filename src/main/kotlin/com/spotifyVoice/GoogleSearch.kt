@@ -1,72 +1,91 @@
 package authorization.authorization_code.com.spotifyVoice
 
+import authorization.authorization_code.com.spotifyVoice.Util.Companion.calculateLeven
 import com.google.gson.Gson
 import java.net.URLEncoder
-import Json4Kotlin_Base
-import java.util.*
+import kotlin.collections.HashMap
 
 class GoogleSearch {
-   var  apiKey = "AIzaSyBnOBjQOif7CRdptFRR_m--s7ubGfB8At8"
-    var searchEngineKey = "008627090675627990467:hcutbn_2ktw"
-    fun search(term :String) : String?{
+   var  apiKey = "AIzaSyAGrye4zZST9F4cthzM_Sdw9qEsRppBqII"
+
+    fun search(term : String, searchEngineKey : String) : HashMap<String,List<String>>?{
 
         var json = Online().wget("https://www.googleapis.com/customsearch/v1?key=$apiKey&cx=$searchEngineKey&q=${URLEncoder.encode(term)}")
 
         val results = Gson().fromJson(json, GsonGoogleSearch::class.java)
         var levenlist = arrayListOf<Pair<Items,Int>>()
 
-        if(results != null && results.items != null) {
+        if(results != null && results.items != null) {  //Intellij thinks results.items can't be null but it can
             for (res in results.items) {
+
                 var title = res.title.toLowerCase().replace(" on spotify", "").replace(" | spotify playlist", "")
-                title = title.replace(" - playlist", "").replace(" | spotify", "").replace(" - a song by","")
-                title = title.replace("...","").replace(" - song by","").replace(" - single by","")
-                res.title = title
+                title = title.replace(" - playlist", "").replace(" | spotify", "").replace(" - a song by", "")
+                title = title.replace("...", "").replace(" - song by", "").replace(" - single by", "")
+
+                try{
+                    title = ""
+                    if(res.link.contains("spotify.com/track")) {
+                        var pos = res.snippet.indexOf("on Spotify")
+                        title = res.snippet.substring(0, pos).replace("Listen to ", "").trim()
+                        title = Util.removeFeaturesFromTrackTitle(title)
+                    }
+                    if(res.link.contains("youtube")){
+                        title = res.title.toLowerCase()
+                        title = title.replace("Mix - ", "")
+                        if(title.contains("-")){
+                            title = title.substring(res.title.indexOf("-")).trim()
+                        }
+                        title = Util.removeFeaturesFromTrackTitle(title)
+                        title = title.replace("official", "").replace("music", "").replace("video", "")
+                        title = title.replace("youtube", "")
+                        title = title.replace("|", "")
+                        title = title.replace("[", "").replace("]", "")
+                        title = title.replace("(", "").replace(")", "")
+                        title = title.replace(" audio", "").replace("lyrics", "")
+                        title = title.replace("...", "")
+                        title = title.replace("-","")
+
+                    }
+
+                } catch (e : StringIndexOutOfBoundsException){}
+                res.title = title.trim()
+
                 levenlist.add(Pair(res, calculateLeven(title.trim(), term)))
             }
-            println("\n google results :::::::::::::")
-            for (item in levenlist) {
 
-                println("${item.first.title} - L(${item.second})")
+            var suggestedArists = results.items.filter{it.link.contains("spotify.com/artist") && it.title.isNotEmpty()}.map { items -> items.title }
+            var suggestedTracks = results.items.filter{it.link.contains("spotify.com/track") or it.link.contains("youtube") && it.title.isNotEmpty()}.map { it.title }
+            var suggestedAlbums = results.items.filter{item -> item.link.contains("spotify.com/album") && item.title.isNotEmpty()}.map { items -> items.title }
+            var suggestedplaylists = results.items.filter{item -> item.link.contains("spotify.com/playlists") && item.title.isNotEmpty()}.map { items -> items.title }
 
+
+            println("'$term' google results :::::::::::::")
+            suggestedTracks.forEach { println(it + " | Track")}
+            suggestedArists.forEach { println(it + " | Artist")}
+            suggestedAlbums.forEach { println(it + " | Album")}
+            suggestedplaylists.forEach { println(it + " | Playlist")}
+            println("::::::::::::::::::::::::::::::::::::::::::::")
+
+            var googleData = HashMap<String, List<String>>()
+            if(suggestedTracks.isNotEmpty()){
+                googleData.put("track", suggestedTracks)
             }
-            println("::::::::::::::::::::::::::::")
+            if(suggestedArists.isNotEmpty()){
+                googleData.put("artist", suggestedArists)
+            }
+//            if(suggestedAlbums.isNotEmpty()){
+//                googleData.put("album", suggestedAlbums)
+//            }
+//            if(suggestedplaylists.isNotEmpty()){
+//                googleData.put("playlist", suggestedplaylists)
+//            }
 
-            return levenlist[0].first.link
+            return googleData
         }
+
         return null
     }
 
 
-
-    internal fun calculateLeven(x: String, y: String): Int {
-
-        val dp = Array(x.length + 1) { IntArray(y.length + 1) }
-
-        for (i in 0..x.length) {
-            for (j in 0..y.length) {
-                if (i == 0) {
-                    dp[i][j] = j
-                } else if (j == 0) {
-                    dp[i][j] = i
-                } else {
-                    dp[i][j] = min(
-                        dp[i - 1][j - 1] + costOfSubstitution(x[i - 1], y[j - 1]),
-                        dp[i - 1][j] + 1,
-                        dp[i][j - 1] + 1
-                    )
-                }
-            }
-        }
-
-        return dp[x.length][y.length]
-    }
-
-    fun costOfSubstitution(a: Char, b: Char): Int {
-        return if (a == b) 0 else 1
-    }
-    fun min(vararg numbers: Int): Int {
-        return Arrays.stream(numbers)
-            .min().orElse(Integer.MAX_VALUE)
-    }
 
 }

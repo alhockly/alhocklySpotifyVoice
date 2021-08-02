@@ -12,8 +12,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 For support, please feel free to contact me at https://www.linkedin.com/in/syedabsar */
 
 
-data class Pagemap (
+data class Metatags (
 
-	@SerializedName("metatags") val metatags : List<Metatags>,
-	@SerializedName("cse_image") val cse_image : List<Cse_image>
+	@SerializedName("og:image") val ogimage : String,
+	@SerializedName("og:type") val ogtype : String,
+	@SerializedName("music:song") val musicsong : String,
+	@SerializedName("og:title") val ogtitle : String,
+	@SerializedName("music:creator") val musiccreator : String,
+	@SerializedName("music:song:track") val musicsongtrack : Int,
+	@SerializedName("og:url") val ogurl : String,
+	@SerializedName("music:song_count") val musicsong_count : Int,
+	@SerializedName("og:description") val ogdescription : String
 )

@@ -1,18 +1,18 @@
 import com.spotifyVoice.Spotify
 import com.wrapper.spotify.exceptions.detailed.UnauthorizedException
-import org.junit.Before
-import org.junit.Test
+
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 
 class SpotifyApiTests {
-    lateinit var spotify : Spotify
+    var spotify = Spotify()
 
-    @Before
-    fun setUp(){
-        spotify = Spotify()
-    }
+
 
     @Test
     fun GenericSearch(){
+        spotify = Spotify()
         if (spotify.checkAuthStatus()) {
            search("walk comethazine","track,artist,album")
         }
@@ -20,7 +20,7 @@ class SpotifyApiTests {
 
     @Test
     fun playSpotify(){
-        spotify.requestPausePlayback(true)
+       spotify.requestApiFunction { spotify.pausePlayback(true) }
     }
 
     fun search(term : String, type : String){

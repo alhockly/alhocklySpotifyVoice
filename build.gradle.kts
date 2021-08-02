@@ -19,13 +19,25 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("stdlib"))
-    testCompile("junit", "junit", "4.12")
+    testCompile("junit", "junit", "4.4")
+    testImplementation("junit", "junit", "4.4")
+
+    testImplementation("org.assertj:assertj-core:3.12.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.4.2")
+    testRuntime("org.junit.jupiter:junit-jupiter-engine:5.4.2")
+
     implementation("org.seleniumhq.selenium:selenium-server:3.0.1")
-    compile("com.github.goxr3plus:java-google-speech-api:V2.1")
+    //compile("com.github.goxr3plus:java-google-speech-api:V2.1")
     compile("com.google.guava:guava:22.0")
     compile ("com.github.thelinmichael:spotify-web-api-java:master-SNAPSHOT")
     compile ("com.github.jmdns:jmdns:master-SNAPSHOT")
+    compile("javax.xml.ws:jaxws-api:2.2.11")
+    compile("net.sourceforge.javaflacencoder:java-flac-encoder:0.3.7")
+    compile("org.json:json:20210307")
+}
 
+tasks.test {
+    useJUnitPlatform()
 }
 
 configure<JavaPluginConvention> {
