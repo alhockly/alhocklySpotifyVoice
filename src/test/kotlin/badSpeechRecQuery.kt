@@ -1,5 +1,4 @@
 import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
-import authorization.authorization_code.com.spotifyVoice.mDnsInteractor
 import com.spotifyVoice.Main
 import com.spotifyVoice.SpeechRec
 import org.junit.Test
@@ -15,16 +14,9 @@ class main : SpeechRecInteractor.MainInter {
         TODO("Not yet implemented")
     }
 
-
     @Test
-    public fun badQuery(){
+    fun badQuery(){
         var sp = SpeechRec(Main())
-
-        sp.spotifyPlayTrack("play bob and weave by bfd the pac-man")
-
+        sp.playTrackIntent("play bob and weave by bfd the pac-man")
     }
-
-
-
-
 }

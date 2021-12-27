@@ -1,11 +1,9 @@
 package com.spotifyVoice
 
-import WakeWordEngine
-import com.spotifyVoice.OsCheck
+import com.spotifyVoice.WakeWordEngine
 import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
 import authorization.authorization_code.com.spotifyVoice.mDnsInteractor
 //import authorization.authorization_code.com.spotifyVoice.mDnsService
-
 import java.io.BufferedReader
 import java.io.IOException
 import java.net.Inet4Address

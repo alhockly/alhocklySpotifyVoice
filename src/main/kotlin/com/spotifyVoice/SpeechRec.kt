@@ -49,7 +49,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
         speechResponseListener.ignore = true
         //search for a track
         if (text.contains("play") && text.contains("by")){
-           spotifyPlayTrack(text)
+           playTrackIntent(text)
             speechHandled = true
             return
         }
@@ -59,7 +59,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
             var term = text.substring(text.indexOf("play")+5, text.indexOf("on spotify"))
             var search = spotify.requestGenericSearch("artist,album",term)
             if(search != null){
-               spotify.requestApiFunction {  spotify.playUri(search)}
+               spotify.requestApiFunction {spotify.playUri(search)}
             }
             speechHandled = true
             return
@@ -97,7 +97,7 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
 
 
 
-    fun spotifyPlayTrack(text : String){
+    fun playTrackIntent(text : String){
         var inputsong = text.substring(text.indexOf("play ") + 5, text.indexOf(" by ")).trim()
         var inputartist = text.substring(text.indexOf( " by ") + 3).trim()
 
@@ -199,7 +199,9 @@ class SpeechRec(mainClassInterator : SpeechRecInteractor.MainInter) : SpeechRecI
                 duplex.recognize(mic.targetDataLine, mic.audioFormat)
 
             } catch (e: LineUnavailableException) {
+                System.out.println("The audio input device used was busy or incompatible")
                 e.printStackTrace()
+                System.exit(-1)
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             } catch (e : IOException){
