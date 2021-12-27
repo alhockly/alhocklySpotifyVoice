@@ -1,13 +1,13 @@
 package com.spotifyVoice
 
-import authorization.authorization_code.com.spotifyVoice.OsCheck
+import WakeWordEngine
+import com.spotifyVoice.OsCheck
 import authorization.authorization_code.com.spotifyVoice.SpeechRecInteractor
 import authorization.authorization_code.com.spotifyVoice.mDnsInteractor
-import authorization.authorization_code.com.spotifyVoice.mDnsService
+//import authorization.authorization_code.com.spotifyVoice.mDnsService
 
 import java.io.BufferedReader
 import java.io.IOException
-import java.lang.reflect.Array.get
 import java.net.Inet4Address
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -39,7 +39,7 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
     var localNetworkMap = mutableMapOf<String,Inet4Address>()
     val ostype : OsCheck.OSType = OsCheck().operatingSystemType!!
     var speechRec = SpeechRec(this)
-    var mdns = mDnsService(this)
+    //var mdns = mDnsService(this)
 
     fun start(){
             waitingForHotWord = true
@@ -77,37 +77,7 @@ class Main : SpeechRecInteractor.MainInter, mDnsInteractor.MainInter{
 
 
         fun runpython(ostype: OsCheck.OSType) {
-            println("\nlistening for Friday..")
-            when (ostype) {
-                OsCheck.OSType.MacOS -> runOScommand(
-                    mutableListOf(
-                        "python3",
-                        "porcupine_hotword.py",
-                        "--keyword_file_paths",
-                        "friday_mac.ppn"
-                    )
-                )
-                OsCheck.OSType.Linux -> runOScommand(
-                    mutableListOf(
-                        "python3",
-                        "porcupine_hotword.py",
-                        "--keyword_file_paths",
-                        "friday_linux.ppn"
-                    )
-                )
-                OsCheck.OSType.Windows -> runOScommand(
-                    mutableListOf(
-                        "cmd.exe",
-                        "/c",
-                        "python",
-                        "porcupine_hotword.py",
-                        "--keyword_file_paths",
-                        "friday_windows.ppn"
-                    )
-                )
-                OsCheck.OSType.Other -> return
-            }
-
+            WakeWordEngine.listenForWord(ostype)
             //println("hotword detected!\n")
         }
 

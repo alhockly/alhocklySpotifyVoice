@@ -1,5 +1,4 @@
-package authorization.authorization_code.com.spotifyVoice
-
+package com.spotifyVoice
 import java.util.*
 
 

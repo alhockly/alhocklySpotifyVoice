@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "SpotifyVoice"
-version = "1.0-SNAPSHOT"
+version = "2.0"
 
 repositories {
     mavenCentral()
@@ -30,10 +30,12 @@ dependencies {
     //compile("com.github.goxr3plus:java-google-speech-api:V2.1")
     compile("com.google.guava:guava:22.0")
     compile ("com.github.thelinmichael:spotify-web-api-java:master-SNAPSHOT")
-    compile ("com.github.jmdns:jmdns:master-SNAPSHOT")
+    //compile ("com.github.jmdns:jmdns:master-SNAPSHOT")
     compile("javax.xml.ws:jaxws-api:2.2.11")
     compile("net.sourceforge.javaflacencoder:java-flac-encoder:0.3.7")
     compile("org.json:json:20210307")
+    implementation("ai.picovoice:porcupine-java:2.0.2")
+
 }
 
 tasks.test {
