@@ -32,4 +32,4 @@
 ::
 ::978f952a14a936cc963da21a135fa983
 @echo off
-java -cp alhocklySpotifyVoice-1.0-SNAPSHOT.jar com.spotifyVoice.Main
+java -cp alhocklySpotifyVoice-2.0.jar com.spotifyVoice.Main

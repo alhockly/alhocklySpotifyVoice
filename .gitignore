@@ -8,3 +8,5 @@ build/test-results/test/binary/output.bin
 execption.PNG
 spotify.auth
 build/tmp/jar/MANIFEST.MF
+build
+tempfile

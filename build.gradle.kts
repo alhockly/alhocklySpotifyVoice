@@ -11,10 +11,7 @@ version = "2.0"
 repositories {
     mavenCentral()
     maven { url = uri("https://jitpack.io") }
-
 }
-
-
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
@@ -35,7 +32,6 @@ dependencies {
     compile("net.sourceforge.javaflacencoder:java-flac-encoder:0.3.7")
     compile("org.json:json:20210307")
     implementation("ai.picovoice:porcupine-java:2.0.2")
-
 }
 
 tasks.test {
@@ -48,7 +44,6 @@ configure<JavaPluginConvention> {
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
-
 
 tasks.withType<Jar> {
     // Otherwise you'll get a "No main manifest attribute" error
